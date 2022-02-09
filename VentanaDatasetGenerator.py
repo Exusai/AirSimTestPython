@@ -66,26 +66,80 @@ while True:
     if not rawImage:
         pass #continue
     png = cv2.imdecode(airsim.string_to_uint8_array(rawImage), cv2.IMREAD_UNCHANGED)
+    pngOrg = png.copy()
     objects = client.simGetDetections(camera_name, image_type)
+    first = True
     if objects:
         #Guardar img solo una vez
         nombre = 'IMG_' + str(n) +'.png'
-        cv2.imwrite('dataset/' + nombre, png)
+        #cv2.imwrite('dataset/' + nombre, png) #Descomentar
         h, w, c = png.shape
         obs = []
-        for object in objects:
+        for object in reversed(objects):
             s = pprint.pformat(object)
             #print("Ventana: %s" % s)
             # guarda xml
             obs.append((nombre, str(w), str(h), 'ventana', str(int(object.box2D.min.x_val)), str(int(object.box2D.min.y_val)), str(int(object.box2D.max.x_val)), str(int(object.box2D.max.y_val))))
-            # Display images
-            cv2.rectangle(png,(int(object.box2D.min.x_val),int(object.box2D.min.y_val)),(int(object.box2D.max.x_val),int(object.box2D.max.y_val)),(255,0,0),2)
+            cv2.rectangle(png,(int(object.box2D.min.x_val),int(object.box2D.min.y_val)),(int(object.box2D.max.x_val),int(object.box2D.max.y_val)),(255,0,0),2) #quitar estos del
             cv2.putText(png, object.name, (int(object.box2D.min.x_val),int(object.box2D.min.y_val - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12))
+            ### Codigo para volar a ventana ###
+            if first:
+                xMin = int(object.box2D.min.x_val)
+                yMin = int(object.box2D.min.y_val)
+                xMax = int(object.box2D.max.x_val)
+                yMax = int(object.box2D.max.y_val)
 
-        write_xml('dataset', nombre, obs)
+                cropped = pngOrg[yMin:yMax, xMin:xMax]
+                hsv = cv2.cvtColor(cropped,cv2.COLOR_BGR2HSV)
+                lower_r = np.array([160,100,100])
+                upper_r = np.array([179,255,255])
+                mask = cv2.inRange(hsv,lower_r,upper_r)
+                res = cv2.bitwise_and(cropped,cropped,mask=mask)
+                #_,thresh = cv2.threshold(res,125,255,cv2.THRESH_BINARY)
+                ret, thresh = cv2.threshold(res,125,255,cv2.THRESH_BINARY)
+                imgCanny = cv2.Canny(thresh, 180, 180)
+                dilate =  cv2.dilate(imgCanny,None,iterations=1)
+                
+                #cnts, _ = cv2.findContours(dilate,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
+                cnts, _ = cv2.findContours(dilate, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+                centro = [0]*2
+                markerInRange = False
+                primero = True
+                for cnt in cnts:
+                    if primero:
+                        epsilon = 0.1*cv2.arcLength(cnt,True)
+                        approx = cv2.approxPolyDP(cnt,epsilon,True)
+                        x,y,w,h = cv2.boundingRect(approx)
+                        #cv2.rectangle(cropped, (x, y), (x + w, y + h), (60,255,255), 3)
+                        centro[0] = centro[0] + ((2*x+w)/2)
+                        centro[1] = centro[1] + ((2*y+h)/2)
+                        
+                        if len(approx) == 4:
+                            #cv2.drawContours(cropped,cnt,-1,(60,255,255),4)
+                            
+                            cv2.rectangle(cropped, (x, y), (x + w, y + h), (60,255,255), 3)
+                            centro[0] = centro[0] + ((2*x+w)/2)
+                            centro[1] = centro[1] + ((2*y+h)/2)
+                        primero = False
+
+                try:
+                    centerAv = centro[0]/2, centro[1]/2
+                    #print("Centro: ", centerAv)
+                    centerX = int(centerAv[0])
+                    centerY = int(centerAv[1])
+                except:
+                    centerX = int((xMax-xMin)/2) + xMin
+                    centerY = int((yMax-yMin)/2) + yMin
+                
+                cv2.circle(pngOrg, (xMin+centerX, yMin+centerY), 5, (0, 0, 255), -1)
+
+                first = False
+
+        #write_xml('dataset', nombre, obs) # descomentar
 
 
-    cv2.imshow("AirSim", png)
+    cv2.imshow("AirSim", pngOrg)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         pass #break
     elif cv2.waitKey(1) & 0xFF == ord('c'):
