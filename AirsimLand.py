@@ -44,8 +44,6 @@ print("Taking off...")
 client.armDisarm(True)
 client.takeoffAsync().join()
 
-
-
 #airsim.wait_key('Press any key to move vehicle at 5 mts/s')
 client.moveToPositionAsync(212, -325, -20, 5).join() #en unity (z, x, -y, vel)
 client.hoverAsync().join()

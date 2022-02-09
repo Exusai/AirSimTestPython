@@ -1,3 +1,4 @@
+import time
 import airsim
 import cv2
 import numpy as np 
@@ -47,7 +48,8 @@ def write_xml(folder, filename, bbox_list):
     tree.write(xml_filename)
 
 # connect to the AirSim simulator
-client = airsim.VehicleClient()
+#client = airsim.VehicleClient()
+client = airsim.MultirotorClient()
 client.confirmConnection()
 
 # set camera name and image type to request images and detections
@@ -59,23 +61,34 @@ client.simSetDetectionFilterRadius(camera_name, image_type, 200 * 100)
 # add desired object name to detect in wild card/regex format
 client.simAddDetectionFilterMeshName(camera_name, image_type, "ventana*")
 
+#client.enableApiControl(True)
+#airsim.wait_key('Press any key to takeoff and move')
+""" print("Taking off...")
+client.armDisarm(True)
+client.takeoffAsync().join()
+client.hoverAsync().join() """
 
 n = 1
 while True:
     rawImage = client.simGetImage(camera_name, image_type)
+    
     if not rawImage:
         pass #continue
+
     png = cv2.imdecode(airsim.string_to_uint8_array(rawImage), cv2.IMREAD_UNCHANGED)
+    img_width = png.shape[0]
+    img_height = png.shape[1]
     pngOrg = png.copy()
     objects = client.simGetDetections(camera_name, image_type)
-    first = True
+    first = False
     if objects:
         #Guardar img solo una vez
         nombre = 'IMG_' + str(n) +'.png'
         #cv2.imwrite('dataset/' + nombre, png) #Descomentar
         h, w, c = png.shape
         obs = []
-        for object in reversed(objects):
+        #for object in reversed(objects):
+        for object in objects:
             s = pprint.pformat(object)
             #print("Ventana: %s" % s)
             # guarda xml
@@ -131,15 +144,57 @@ while True:
                 except:
                     centerX = int((xMax-xMin)/2) + xMin
                     centerY = int((yMax-yMin)/2) + yMin
-                
-                cv2.circle(pngOrg, (xMin+centerX, yMin+centerY), 5, (0, 0, 255), -1)
 
+                """ markerInRange = True
+                CENTER = centerAv
+                tr = 20
+                width_upper_limit = img_width/2 + tr
+                width_lower_limit = img_width/2 - tr
+                height_upper_limit = img_height/2 + tr
+                height_lower_limit = img_height/2 - tr
+                landing_altitude = .8
+                state = client.getMultirotorState()
+                z_p = (state.kinematics_estimated.position.z_val) #.95 fixes offset
+
+                vx = 0
+                vy = 0
+                vz = 0
+
+                if markerInRange:
+                    if CENTER[0] > width_lower_limit and CENTER[0] < width_upper_limit:
+                        if CENTER[1] > height_lower_limit and CENTER[1] < height_upper_limit:
+                            #disminuye altura
+                            if z_p > landing_altitude:
+                                #vz = bl.PDz(landing_altitude, z_p, 2, .8, .8, .02)
+                                vx = 2
+                            #if altura menor a otro landing altitude entonces land
+                        else:
+                            #corrige en x proporcional al error (que tan lejos se esta del centro)
+                            e = img_height/2 - CENTER[1]
+                            vy = e/(img_height)
+                            #vx = e
+                            
+                    else:
+                        # corrige en y proporcional al error (que tan lejos se esta del centro)
+                        e = img_width/2 - CENTER[0]
+                        vz = e/(img_width)
+                        #vy = e
+
+                    #enviar_velocidad(vx, vy, vz, vaz)
+                    #print(-vx,-vy,-vz)
+                    client.moveByVelocityAsync(vx,vy,-vz,.2).join()
+
+                """
+                cv2.circle(pngOrg, (xMin+centerX, yMin+centerY), 5, (0, 0, 255), -1) 
                 first = False
 
         #write_xml('dataset', nombre, obs) # descomentar
 
+    #cv2.imshow("AirSim1", pngOrg)
+    cv2.imshow("AirSim2", png)
+    #cv2.imshow("AirSim3", cropped)
+    cv2.waitKey(1)
 
-    cv2.imshow("AirSim", pngOrg)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         pass #break
     elif cv2.waitKey(1) & 0xFF == ord('c'):
