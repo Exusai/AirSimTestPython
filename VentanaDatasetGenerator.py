@@ -87,8 +87,8 @@ while True:
         #cv2.imwrite('dataset/' + nombre, png) #Descomentar
         h, w, c = png.shape
         obs = []
-        #for object in reversed(objects):
-        for object in objects:
+        for object in objects[0:3]:
+            #for object in objects:
             s = pprint.pformat(object)
             #print("Ventana: %s" % s)
             # guarda xml
@@ -190,7 +190,7 @@ while True:
 
         #write_xml('dataset', nombre, obs) # descomentar
 
-    #cv2.imshow("AirSim1", pngOrg)
+    cv2.imshow("AirSim1", pngOrg)
     cv2.imshow("AirSim2", png)
     #cv2.imshow("AirSim3", cropped)
     cv2.waitKey(1)
