@@ -83,8 +83,9 @@ while True:
     first = False
     if objects:
         #Guardar img solo una vez
-        nombre = 'IMG_' + str(n) +'.png'
-        #cv2.imwrite('dataset/' + nombre, png) #Descomentar
+        nombre = 'IMG_' + str(n) +'.JPEG'
+        #print(nombre)
+        cv2.imwrite('dataset/' + nombre, png) #Descomentar
         h, w, c = png.shape
         obs = []
         for object in objects[0:3]:
@@ -188,12 +189,13 @@ while True:
                 cv2.circle(pngOrg, (xMin+centerX, yMin+centerY), 5, (0, 0, 255), -1) 
                 first = False
 
-        #write_xml('dataset', nombre, obs) # descomentar
+        write_xml('dataset', nombre, obs) # descomentar
+        n += 1
 
-    cv2.imshow("AirSim1", pngOrg)
-    cv2.imshow("AirSim2", png)
+    #cv2.imshow("AirSim1", pngOrg)
+    #cv2.imshow("AirSim2", png)
     #cv2.imshow("AirSim3", cropped)
-    cv2.waitKey(1)
+    #cv2.waitKey(1)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         pass #break
